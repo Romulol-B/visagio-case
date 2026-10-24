@@ -6,7 +6,7 @@
 3. Jobs Automáticos.
 
 #### TODO:
-0.0 Landing e bronze (FEITO)
+##### Landing e bronze (FEITO)
 ##### Tratamento de cada tabela:
    
 1.1. base_atendentes
@@ -25,8 +25,8 @@
 
 1.8. pesquisa_satisfacao
 
-3. Elaboração da camada gold.
+##### Elaboração da camada gold.
 
-4. Analytics no Power BI com os indicadores.
+##### Analytics no Power BI com os indicadores.
 
-5. Criação de um job idempotente
+##### Criação de um job idempotente
