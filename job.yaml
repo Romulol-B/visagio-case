@@ -1,0 +1,100 @@
+resources:
+  jobs:
+    visagio_case:
+      name: visagio-case
+      tasks:
+        - task_key: landing
+          notebook_task:
+            notebook_path: /Workspace/Users/romin.nf@gmail.com/visagio-case/notebooks/00_Landing
+            source: WORKSPACE
+        - task_key: bronze
+          depends_on:
+            - task_key: landing
+          notebook_task:
+            notebook_path: /Workspace/Users/romin.nf@gmail.com/visagio-case/notebooks/01_Landing_to_Bronze
+            source: WORKSPACE
+        - task_key: silver_atendentes
+          depends_on:
+            - task_key: bronze
+          notebook_task:
+            notebook_path: /Workspace/Users/romin.nf@gmail.com/visagio-case/notebooks/02_silver_atendentes
+            source: WORKSPACE
+        - task_key: silver_canais
+          depends_on:
+            - task_key: bronze
+          notebook_task:
+            notebook_path: /Workspace/Users/romin.nf@gmail.com/visagio-case/notebooks/02_silver_canais
+            source: WORKSPACE
+        - task_key: silver_clientes_chamados_hora
+          depends_on:
+            - task_key: bronze
+          notebook_task:
+            notebook_path: /Workspace/Users/romin.nf@gmail.com/visagio-case/notebooks/02_Bronze_to_Silver
+            source: WORKSPACE
+        - task_key: silver_custos
+          depends_on:
+            - task_key: bronze
+          notebook_task:
+            notebook_path: /Workspace/Users/romin.nf@gmail.com/visagio-case/notebooks/02_Silver_custos
+            source: WORKSPACE
+        - task_key: silver_motivos
+          depends_on:
+            - task_key: bronze
+          notebook_task:
+            notebook_path: /Workspace/Users/romin.nf@gmail.com/visagio-case/notebooks/02_Silver_motivos
+            source: WORKSPACE
+        - task_key: silver_chamados
+          depends_on:
+            - task_key: silver_motivos
+            - task_key: silver_canais
+          notebook_task:
+            notebook_path: /Workspace/Users/romin.nf@gmail.com/visagio-case/notebooks/02_Silver_chamados
+            source: WORKSPACE
+        - task_key: silver_chamados_hora
+          depends_on:
+            - task_key: silver_chamados
+          notebook_task:
+            notebook_path: /Workspace/Users/romin.nf@gmail.com/visagio-case/notebooks/02_Silver_chamados_hora
+            source: WORKSPACE
+        - task_key: silver_pesquisa
+          depends_on:
+            - task_key: bronze
+          notebook_task:
+            notebook_path: /Workspace/Users/romin.nf@gmail.com/visagio-case/notebooks/02_Silver_pesquisa
+            source: WORKSPACE
+        - task_key: gold
+          depends_on:
+            - task_key: silver_clientes_chamados_hora
+            - task_key: silver_chamados_hora
+            - task_key: silver_atendentes
+            - task_key: silver_chamados
+            - task_key: silver_custos
+            - task_key: silver_canais
+            - task_key: silver_motivos
+            - task_key: silver_pesquisa
+          notebook_task:
+            notebook_path: /Workspace/Users/romin.nf@gmail.com/visagio-case/notebooks/03_Gold_Analise_Chamados
+            source: WORKSPACE
+        - task_key: gold_jornadas
+          depends_on:
+            - task_key: silver_clientes_chamados_hora
+            - task_key: silver_chamados_hora
+            - task_key: silver_atendentes
+            - task_key: silver_chamados
+            - task_key: silver_custos
+            - task_key: silver_canais
+            - task_key: silver_motivos
+            - task_key: silver_pesquisa
+          notebook_task:
+            notebook_path: /Workspace/Users/romin.nf@gmail.com/visagio-case/notebooks/03_Gold_Jornadas
+            source: WORKSPACE
+        - task_key: 04_Dores
+          depends_on:
+            - task_key: gold_jornadas
+            - task_key: gold
+          notebook_task:
+            notebook_path: /Workspace/Users/romin.nf@gmail.com/visagio-case/notebooks/04_Dores
+            source: WORKSPACE
+      queue:
+        enabled: true
+      performance_target: PERFORMANCE_OPTIMIZED
