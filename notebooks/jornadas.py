@@ -1,6 +1,7 @@
 """Gold de jornadas inferidas. Funções sem gravação, reutilizadas pelo notebook."""
 
 from pyspark.sql import Window, functions as F
+from tempos import aplicar_periodo_tempos, timestamp_no_periodo
 
 
 def validar_chave(df, chave, tabela):
@@ -35,9 +36,11 @@ def construir_jornadas(chamados, horarios, motivos, custos, pesquisas, clientes,
     ]:
         validar_chave(df, chave, nome)
 
-    h = horarios.select(
-        'id_chamado', F.col('id_cliente').alias('id_cliente_horario'),
+    # Defesa adicional para entradas antigas que ainda contenham datas fora do domínio.
+    h = aplicar_periodo_tempos(horarios).select(
+        'id_chamado',
         'hora_abertura_chamado', 'hora_finalizacao_atendimento',
+        'abertura_fora_periodo',
     )
     # Recupera o nome da etapa a partir da chave normalizada na Silver.
     # LEFT preserva chamados com canal ausente ou fora do cadastro.
@@ -45,13 +48,12 @@ def construir_jornadas(chamados, horarios, motivos, custos, pesquisas, clientes,
     base = chamados.select(
         'id_chamado', 'id_cliente', 'id_motivo', 'id_canal', 'resolvido',
     ).join(cadastro_canais, 'id_canal', 'left').join(h, 'id_chamado', 'left')
+    base = base.fillna({'abertura_fora_periodo': False})
     # Chamados é a referência, desde que o cliente esteja no cadastro oficial.
-    # Não substituir por clientes da tabela de horários, mesmo se cadastrados.
+    # A tabela temporal é ligada exclusivamente por id_chamado.
     cadastro_clientes = clientes.select('id_cliente').withColumn('cliente_cadastrado', F.lit(True))
     base = base.join(cadastro_clientes, 'id_cliente', 'left').fillna(
         {'cliente_cadastrado': False}
-    ).withColumn(
-        'cliente_divergente', F.col('id_cliente') != F.col('id_cliente_horario')
     ).withColumn(
         'data_jornada', F.to_date('hora_abertura_chamado')
     ).withColumn(
@@ -60,7 +62,9 @@ def construir_jornadas(chamados, horarios, motivos, custos, pesquisas, clientes,
             F.when(F.col('id_cliente').isNotNull() & ~F.col('cliente_cadastrado'),
                    'cliente_nao_cadastrado'),
             F.when(F.col('id_motivo').isNull(), 'motivo_ausente'),
-            F.when(F.col('hora_abertura_chamado').isNull(), 'abertura_ausente'),
+            F.when(F.col('abertura_fora_periodo'), 'abertura_fora_periodo'),
+            F.when(F.col('hora_abertura_chamado').isNull() &
+                   ~F.col('abertura_fora_periodo'), 'abertura_ausente'),
         )
     ).withColumn(
         'motivo_exclusao', F.when(F.length('motivo_exclusao') > 0, F.col('motivo_exclusao'))
@@ -235,6 +239,11 @@ def construir_jornadas(chamados, horarios, motivos, custos, pesquisas, clientes,
 
 def validar_resultados(chamados, tabelas):
     vinculo, jornadas = tabelas['jornada_chamados'], tabelas['jornadas']
+    for nome, df in tabelas.items():
+        if df.filter(~timestamp_no_periodo('data_jornada')).limit(1).count():
+            raise ValueError(f'{nome}: data_jornada fora do período de atendimento')
+    if vinculo.filter('abertura_fora_periodo AND id_jornada IS NOT NULL').limit(1).count():
+        raise ValueError('Abertura fora do período formou jornada')
     validar_chave(vinculo, 'id_chamado', 'gold.jornada_chamados')
     validar_chave(jornadas, 'id_jornada', 'gold.jornadas')
     if vinculo.count() != chamados.count():
